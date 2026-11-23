@@ -13,11 +13,12 @@ cd ../
 
 cd mplus
 wget https://github.com/coz-m/MPLUS_FONTS/archive/refs/heads/master.zip -O mplus.zip
-unzip -j mplus.zip "*.ttf"
+# M+ 1 / M+ 2 / M+ 3 の静的フォントとバリアブルフォントだけを展開する
+unzip -j -o mplus.zip "*/fonts/MPLUS[123]/ttf/*.ttf" "*/fonts/MPLUS[123]/variable/*.ttf"
 cd ../
 
 echo "McMejiro を生成するには FontForge をインストールし、以下を実行してください"
-echo "fontforge -lang=py -script mejiro.py"
+echo "fontforge -lang=py -script mejiro.py [1|2|3|all]"
 echo "バリアブルフォントを生成するには fontTools をインストールし、以下を実行してください"
-echo "python3 mejiro_vf.py"
+echo "python3 mejiro_vf.py [1|2|3|all]"
 tput sgr0

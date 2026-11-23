@@ -3,12 +3,16 @@
 #
 # McMejiro バリアブルフォント (wght 100-900) を生成するスクリプト
 #
-# M+ 1 と Roboto のバリアブルフォントから同じウェイトのインスタンスを切り出し、
+# 使い方: python3 mejiro_vf.py [1|2|3|all ...]
+# 引数を省略すると M+ 1 版 (McMejiro) のみを生成する
+#
+# M+ (1 / 2 / 3) と Roboto のバリアブルフォントから同じウェイトのインスタンスを切り出し、
 # ウェイトごとに合成したものをマスターとして fontTools.varLib でまとめ直す。
 # 両フォントとも 100 刻みで線形補間されているため、100〜900 の 9 マスターで
 # 元のバリアブルフォントの形状をそのまま再現できる。
 
 import copy
+import sys
 from datetime import date
 
 from fontTools.designspaceLib import (
@@ -30,11 +34,20 @@ import fontTools.subset  # noqa: F401  GSUB/GPOS に subset_feature_tags など�
 # Roboto のバリアブルフォントのパス
 roboto_vf_path = "./roboto/Roboto[wdth,wght].ttf"
 
-# M+ 1 のバリアブルフォントのパス
-mplus_vf_path = "./mplus/MPLUS1[wght].ttf"
+# M+ のバリアブルフォントのパス ({0} に M+ ファイル名の接頭辞が入る)
+mplus_vf_path = "./mplus/{0}[wght].ttf"
 
-# 生成する McMejiro バリアブルフォントのパス
-mejiro_vf_path = "./mejiro/McMejiro[wght].ttf"
+# 生成する McMejiro バリアブルフォントのパス ({0} にファミリー名が入る)
+mejiro_vf_path = "./mejiro/{0}[wght].ttf"
+
+# 元にする M+ のファミリー
+# 指定名, M+ ファイル名の接頭辞, 生成するフォントのファミリー名
+variants = [
+    ("1", "MPLUS1", "McMejiro"),
+    ("2", "MPLUS2", "McMejiro2"),
+    ("3", "MPLUS3", "McMejiro3"),
+]
+default_variants = ["1"]
 
 # EM の大きさ (Roboto に合わせる)
 upem = 2048
@@ -54,27 +67,42 @@ weights = [
 default_weight = 400
 
 
+def select_variants(args):
+    names = [v[0] for v in variants]
+    if not args:
+        args = default_variants
+    if "all" in args:
+        args = names
+    unknown = [a for a in args if a not in names]
+    if unknown:
+        sys.exit("不明な指定です: {0} (1, 2, 3, all のいずれか)".format(" ".join(unknown)))
+    return [v for v in variants if v[0] in args]
+
+
 def main():
+    selected = select_variants(sys.argv[1:])
     today = date.today()
-    version = "McMejiro-{0}".format(today.strftime("%Y%m%d"))
 
-    mpvf = TTFont(mplus_vf_path)
-    rbvf = TTFont(roboto_vf_path)
     # Roboto は幅軸を標準幅で固定しておく
-    rbvf = instantiateVariableFont(rbvf, {"wdth": 100})
-
-    masters = {}
-    for wght, name in weights:
-        print("Merging master: wght={0} ({1})".format(wght, name))
-        masters[wght] = generate_master(mpvf, rbvf, wght)
-
+    rbvf = instantiateVariableFont(TTFont(roboto_vf_path), {"wdth": 100})
     replaced = set(TTFont(roboto_vf_path).getGlyphOrder())
-    vf = build_mejiro_vf(masters)
-    transplant_gsub(vf, mpvf, replaced)
-    set_mejiro_info(vf, version)
 
-    print("Saving: {0}".format(mejiro_vf_path))
-    vf.save(mejiro_vf_path)
+    for _, mp_prefix, family in selected:
+        version = "{0}-{1}".format(family, today.strftime("%Y%m%d"))
+        mpvf = TTFont(mplus_vf_path.format(mp_prefix))
+
+        masters = {}
+        for wght, name in weights:
+            print("Merging master: {0} wght={1} ({2})".format(family, wght, name))
+            masters[wght] = generate_master(mpvf, rbvf, wght)
+
+        vf = build_mejiro_vf(masters, family)
+        transplant_gsub(vf, mpvf, replaced)
+        set_mejiro_info(vf, family, version)
+
+        out_path = mejiro_vf_path.format(family)
+        print("Saving: {0}".format(out_path))
+        vf.save(out_path)
 
 
 def generate_master(mpvf, rbvf, wght):
@@ -178,7 +206,7 @@ def remove_kern(font):
     gpos.prune_lookups()
 
 
-def build_mejiro_vf(masters):
+def build_mejiro_vf(masters, family):
     ds = DesignSpaceDocument()
 
     axis = AxisDescriptor()
@@ -197,9 +225,9 @@ def build_mejiro_vf(masters):
         ds.addSource(src)
 
         inst = InstanceDescriptor()
-        inst.familyName = "McMejiro"
+        inst.familyName = family
         inst.styleName = name
-        inst.postScriptFontName = "McMejiro-{0}".format(name)
+        inst.postScriptFontName = "{0}-{1}".format(family, name)
         inst.location = {"Weight": wght}
         ds.addInstance(inst)
 
@@ -257,7 +285,7 @@ def normalize(wght):
     return (wght - default_weight) / (default_weight - lo)
 
 
-def mejiro_sfnt_names(version):
+def mejiro_sfnt_names(family, version):
     copyright = (
         "McMejiro: Copyright (c) 2022- AndroPlus. "
         "Roboto: Copyright (c) 2012- Google. "
@@ -265,14 +293,14 @@ def mejiro_sfnt_names(version):
     )
     return {
         0: copyright,
-        1: "McMejiro",
+        1: family,
         2: "Regular",
-        3: "{0};McMejiro-Regular".format(version),
-        4: "McMejiro Regular",
+        3: "{0};{1}-Regular".format(version, family),
+        4: "{0} Regular".format(family),
         5: version,
-        6: "McMejiro-Regular",
+        6: "{0}-Regular".format(family),
         11: "https://mejiro.andro.plus",
-        25: "McMejiro",
+        25: family,
     }
 
 
@@ -284,14 +312,14 @@ def mejiro_gasp():
     }
 
 
-def set_mejiro_info(vf, version):
+def set_mejiro_info(vf, family, version):
     # フォント情報の設定 (ライセンス表記は M+ のものを残す)
     name = vf["name"]
     keep = {13, 14}
     name.names = [n for n in name.names if n.nameID >= 256 or n.nameID in keep]
-    for name_id, value in mejiro_sfnt_names(version).items():
+    for name_id, value in mejiro_sfnt_names(family, version).items():
         name.setName(value, name_id, 3, 1, 0x409)
-    name.setName("McMejiro", 1, 3, 1, 0x411)
+    name.setName(family, 1, 3, 1, 0x411)
 
     buildStatTable(
         vf,

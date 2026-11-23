@@ -4,8 +4,19 @@
 
 | スクリプト | 生成物 | 必要なもの |
 |:---|:---|:---|
-| `mejiro.py` | 静的フォント `mejiro/McMejiro-*.ttf` (6 ウェイト) | FontForge |
-| `mejiro_vf.py` | バリアブルフォント `mejiro/McMejiro[wght].ttf` | Python 3, fontTools |
+| `mejiro.py` | 静的フォント `mejiro/McMejiro*-*.ttf` (6 ウェイト) | FontForge |
+| `mejiro_vf.py` | バリアブルフォント `mejiro/McMejiro*[wght].ttf` | Python 3, fontTools |
+
+和文部分の元にする M+ は M+ 1 / M+ 2 / M+ 3 から選べます。欧文部分はいずれも Roboto です。
+
+| 指定 | 元にする M+ | 生成するファミリー | 静的フォント | バリアブルフォント |
+|:---:|:---|:---|:---|:---|
+| `1` (省略時) | M+ 1 | McMejiro | `McMejiro-*.ttf` | `McMejiro[wght].ttf` |
+| `2` | M+ 2 | McMejiro2 | `McMejiro2-*.ttf` | `McMejiro2[wght].ttf` |
+| `3` | M+ 3 | McMejiro3 | `McMejiro3-*.ttf` | `McMejiro3[wght].ttf` |
+| `all` | 上の 3 つすべて | | | |
+
+各スクリプトの引数に指定します。複数並べることもできます (例: `2 3`)。
 
 ## 使い方
 
@@ -17,7 +28,7 @@ git clone https://github.com/AndroPlus-org/Scripts-McMejiro make_mejiro
 cd make_mejiro
 ```
 
-M+ 1 と Roboto (静的フォント・バリアブルフォント) を `mplus/`、`roboto/` にダウンロードします。`wget`、`unzip`、fontTools (`pip install fonttools`) が必要です。Roboto の静的フォントはバリアブルフォントから切り出します。
+M+ 1 / M+ 2 / M+ 3 と Roboto (静的フォント・バリアブルフォント) を `mplus/`、`roboto/` にダウンロードします。`wget`、`unzip`、fontTools (`pip install fonttools`) が必要です。Roboto の静的フォントはバリアブルフォントから切り出します。
 
 ```
 bash setup.sh
@@ -41,10 +52,12 @@ pip install fonttools
 FontForge interactive console で実行します。
 
 ```
-fontforge -lang=py -script mejiro.py
+fontforge -lang=py -script mejiro.py        # M+ 1 版 (McMejiro)
+fontforge -lang=py -script mejiro.py 2      # M+ 2 版 (McMejiro2)
+fontforge -lang=py -script mejiro.py all    # 3 種類すべて
 ```
 
-| McMejiro | M+ 1 | Roboto |
+| McMejiro | M+ 1 / 2 / 3 | Roboto |
 |:---:|:---:|:---:|
 | **Thin** | Thin | Thin |
 | **Light** | Light | Light |
@@ -55,14 +68,16 @@ fontforge -lang=py -script mejiro.py
 
 ### バリアブルフォント (wght 100-900)
 
-M+ 1 (`MPLUS1[wght].ttf`) と Roboto (`Roboto[wdth,wght].ttf`) のバリアブルフォントから `mejiro/McMejiro[wght].ttf` を生成します。
+M+ (`MPLUS1[wght].ttf` / `MPLUS2[wght].ttf` / `MPLUS3[wght].ttf`) と Roboto (`Roboto[wdth,wght].ttf`) のバリアブルフォントから `mejiro/McMejiro[wght].ttf` / `McMejiro2[wght].ttf` / `McMejiro3[wght].ttf` を生成します。1 種類あたり数分かかります。
 
 ```
 pip install fonttools
 ```
 
 ```
-python3 mejiro_vf.py
+python3 mejiro_vf.py        # M+ 1 版 (McMejiro)
+python3 mejiro_vf.py 3      # M+ 3 版 (McMejiro3)
+python3 mejiro_vf.py all    # 3 種類すべて
 ```
 
 - ウェイト軸 `wght` 100-900 (デフォルト 400)
